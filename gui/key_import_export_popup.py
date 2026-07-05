@@ -46,6 +46,19 @@ class ImportKeyPopup(Popup):
         path_row.add_widget(browse_btn)
         root.add_widget(path_row)
 
+        meta_row = GridLayout(cols=2, size_hint_y=None, row_default_height=42, spacing=8)
+        meta_row.bind(minimum_height=meta_row.setter("height"))
+
+        meta_row.add_widget(Label(text="Ime:", size_hint_x=0.25))
+        self.name_input = TextInput(multiline=False)
+        meta_row.add_widget(self.name_input)
+
+        meta_row.add_widget(Label(text="E-mail:", size_hint_x=0.25))
+        self.email_input = TextInput(multiline=False)
+        meta_row.add_widget(self.email_input)
+
+        root.add_widget(meta_row)
+
         pwd_row = BoxLayout(size_hint_y=None, height=42, spacing=8)
         pwd_row.add_widget(Label(text="Lozinka:", size_hint_x=0.25))
         self.password_input = TextInput(multiline=False, password=True, disabled=True)
@@ -84,16 +97,19 @@ class ImportKeyPopup(Popup):
 
         try:
             if self.import_type == "public":
-                self.key_manager.import_public_key(path)
+                self.key_manager.import_public_key(
+                    path,
+                    user_name=self.name_input.text.strip() or None,
+                    user_email=self.email_input.text.strip() or None,
+                )
             else:
                 password = self.password_input.text
-                self.key_manager.import_key_pair(path, password)
-        except NotImplementedError:
-            show_message(
-                "Nije implementirano",
-                "Uvoz ključeva još nije implementiran (core/key_manager.py)."
-            )
-            return
+                self.key_manager.import_key_pair(
+                    path,
+                    password,
+                    user_name=self.name_input.text.strip() or None,
+                    user_email=self.email_input.text.strip() or None,
+                )
         except Exception as e:
             show_message("Greška", f"Uvoz nije uspeo:\n{e}")
             return
@@ -159,12 +175,6 @@ class ExportKeyPopup(Popup):
                 else:
                     password = self.password_input.text
                     self.key_manager.export_key_pair(self.key_id, password, destination)
-            except NotImplementedError:
-                show_message(
-                    "Nije implementirano",
-                    "Izvoz ključeva još nije implementiran (core/key_manager.py)."
-                )
-                return
             except Exception as e:
                 show_message("Greška", f"Izvoz nije uspeo:\n{e}")
                 return

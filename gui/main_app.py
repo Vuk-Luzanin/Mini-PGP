@@ -40,6 +40,7 @@ class PGPApp(App):
         )
         root.add_widget(header)
 
+        # navigation tabs
         tabs = TabbedPanel(do_default_tab=False)
 
         key_tab = TabbedPanelItem(text="Ključevi")
@@ -57,16 +58,19 @@ class PGPApp(App):
         receive_tab.add_widget(self.receive_screen)
         tabs.add_widget(receive_tab)
 
-        # Kada se prebaci na tab za slanje, osveži liste ključeva
+        # kad se promeni tab, pozovi self._on_tab_changed
+        # ako je otvoren tab Kljucevi, onda current_tab pokazuje na key_tab
         tabs.bind(current_tab=self._on_tab_changed)
-        self._tabs = tabs
+        self._tabs = tabs                           # save reference to tabs for later use
         self._send_tab = send_tab
 
         root.add_widget(tabs)
         return root
 
     def _on_tab_changed(self, instance, value):
+        # Ako je otvoren tab Slanje poruke, osveži listu kljuceva u tom tabu
         if value is self._send_tab:
             self.send_screen.refresh_key_lists()
+
         if hasattr(self, "key_management_screen"):
             self.key_management_screen.refresh()

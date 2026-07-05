@@ -82,14 +82,7 @@ class KeyGenerationPopup(Popup):
             return
 
         try:
-            # TODO: implementirati u core/key_manager.py
             self.key_manager.generate_key_pair(name, email, key_size, password)
-        except NotImplementedError:
-            show_message(
-                "Nije implementirano",
-                "Generisanje ključeva još nije implementirano (core/key_manager.py)."
-            )
-            return
         except Exception as e:
             show_message("Greška", f"Generisanje ključa nije uspelo:\n{e}")
             return

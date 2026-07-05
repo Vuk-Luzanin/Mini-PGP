@@ -37,6 +37,7 @@ class SendMessageScreen(BoxLayout):
         self.key_manager = key_manager
         self.pgp_engine = pgp_engine
         self.keyring = key_manager.keyring
+        self._sign_key_options = {}
 
         self.add_widget(Label(text="Tekst poruke:", bold=True, size_hint_y=None, height=24))
         self.message_input = TextInput(multiline=True, size_hint_y=0.4)
@@ -49,8 +50,8 @@ class SendMessageScreen(BoxLayout):
         self.sign_checkbox = LabeledCheckbox("Potpiši poruku (SHA-1)")
         self.sign_checkbox.checkbox.bind(active=lambda *_: self._toggle_sign())
         options_box.add_widget(self.sign_checkbox)
-        self.sign_key_spinner = Spinner(text="Izaberi privatni ključ", values=[], disabled=True,
-                                         size_hint_y=None, height=34)
+        self.sign_key_spinner = Spinner(text="Izaberi ključ za potpis", values=[], disabled=True,
+                         size_hint_y=None, height=34)
         options_box.add_widget(self.sign_key_spinner)
 
         # Enkripcija
@@ -98,9 +99,21 @@ class SendMessageScreen(BoxLayout):
         self.symmetric_spinner.disabled = disabled
 
     def refresh_key_lists(self):
-        private_ids = [f"{k.key_id} ({k.user_name})" for k in self.keyring.private_keys]
-        public_ids = [f"{k.key_id} ({k.user_name})" for k in self.keyring.public_keys]
-        self.sign_key_spinner.values = private_ids
+        self._sign_key_options = {}
+
+        sign_values = []
+        for key in self.keyring.list_public_keys():
+            value = f"{key.key_id} | javni | {key.user_id}"
+            self._sign_key_options[value] = {"key_id": key.key_id, "is_private": False}
+            sign_values.append(value)
+
+        for key in self.keyring.list_private_keys():
+            value = f"{key.key_id} | privatni | {key.user_id}"
+            self._sign_key_options[value] = {"key_id": key.key_id, "is_private": True}
+            sign_values.append(value)
+
+        public_ids = [f"{k.key_id} ({k.user_id})" for k in self.keyring.list_public_keys()]
+        self.sign_key_spinner.values = sign_values
         self.encrypt_key_spinner.values = public_ids
 
     @staticmethod
@@ -108,6 +121,13 @@ class SendMessageScreen(BoxLayout):
         if not spinner_value or "(" not in spinner_value:
             return None
         return spinner_value.split(" ")[0]
+
+    def _resolve_sign_selection(self):
+        selection = self.sign_key_spinner.text
+        option = self._sign_key_options.get(selection)
+        if option is None:
+            return None, None
+        return option["key_id"], option["is_private"]
 
     def _on_send(self):
         message = self.message_input.text.strip()
@@ -118,9 +138,12 @@ class SendMessageScreen(BoxLayout):
         sign = self.sign_checkbox.active
         encrypt = self.encrypt_checkbox.active
 
-        sign_key_id = self._extract_key_id(self.sign_key_spinner.text) if sign else None
+        sign_key_id, selected_is_private = self._resolve_sign_selection() if sign else (None, None)
         if sign and not sign_key_id:
             show_message("Upozorenje", "Izaberite privatni ključ za potpis.")
+            return
+        if sign and self.keyring.find_private_key(sign_key_id) is None and not selected_is_private:
+            show_message("Upozorenje", "Za potpis je potreban privatni ključ. Izaberite privatni unos ili par ključeva koji ima privatni deo.")
             return
 
         encrypt_key_id = self._extract_key_id(self.encrypt_key_spinner.text) if encrypt else None
