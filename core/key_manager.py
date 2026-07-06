@@ -76,7 +76,7 @@ class KeyManager:
             "iv": base64.b64encode(iv).decode("ascii"),
             "ciphertext": base64.b64encode(ciphertext).decode("ascii"),
         }
-    
+
         # dumps - from python object to json string, sort_keys=True for deterministic output
         return json.dumps(payload, sort_keys=True).encode("utf-8")      # bytes for writing to file
 
@@ -140,7 +140,7 @@ class KeyManager:
         Generiše novi RSA par ključeva (key_size: 1024 ili 2048 bita),
         čuva privatni ključ enkriptovan zadatom lozinkom, i dodaje
         odgovarajuće zapise u keyring.
-        
+
         """
         if key_size not in (1024, 2048):
             raise ValueError("Veličina ključa mora biti 1024 ili 2048 bita.")
@@ -328,3 +328,12 @@ class KeyManager:
             return self._decrypt_private_key_blob(entry.encrypted_private_key_pem, password) is not None
         except ValueError:
             return False
+
+    def get_private_key(self, key_id: str, password: str):
+        entry = self.keyring.find_private_key(key_id)
+        if entry is None or entry.encrypted_private_key_pem is None:
+            raise KeyError(f"Privatni ključ '{key_id}' nije pronađen.")
+        private_key = self._decrypt_private_key_blob(entry.encrypted_private_key_pem, password)
+        if private_key is None:
+            raise ValueError("Lozinka nije ispravna.")
+        return private_key
